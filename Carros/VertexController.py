@@ -5,7 +5,11 @@ class VertexController:
     def __init__(self):
         # Límites para cada grupo - COHERENTES CON LA UI
         self.limites_y_pares = {'min': -0.5, 'max': 0.5}      # Para 12-13 y 14-15
-        self.limites_x_espejo = {'min': -0.8, 'max': 0.8}    # Para grupos X con espejo
+        
+        # RANGOS DIFERENTES PARA CADA GRUPO EN X
+        self.limites_grupo_9_10_x = {'min': -0.5, 'max': 0.5}    # Más rango para frontal
+        self.limites_grupo_17_18_x = {'min': -0.3, 'max': 0.3}    # Menos rango para trasero
+        
         self.limites_y_individual = {'min': -0.3, 'max': 0.3} # Para 16-17 y 10-11
         
         # Estado actual de desplazamiento
@@ -57,12 +61,12 @@ class VertexController:
         except Exception as e:
             print(f"❌ Error restaurando posiciones Y: {str(e)}")
     
-    # ===== FUNCIONES RANDOM PARA EMERGER - CORREGIDAS =====
+    # ===== FUNCIONES RANDOM PARA EMERGER - CON RANGOS INDIVIDUALES =====
     
     def aplicar_desplazamientos_aleatorios(self):
         """Aplicar desplazamientos aleatorios manteniendo la coherencia de grupos"""
         try:
-            print("🎲 APLICANDO DESPLAZAMIENTOS ALEATORIOS COHERENTES...")
+            print("🎲 APLICANDO DESPLAZAMIENTOS ALEATORIOS CON RANGOS INDIVIDUALES...")
             
             # Verificar que el objeto existe
             if not cmds.objExists("axioma_carro"):
@@ -85,13 +89,13 @@ class VertexController:
             random_14_15 = random.uniform(self.limites_y_pares['min'], self.limites_y_pares['max'])
             self.mover_par_14_15_y(random_14_15)
             
-            # 2. CONTROL DE REFLEJO EN EJE X - CON PRESERVACIÓN DE Y
-            # Grupo 9-10 con reflejo en 8 y 11
-            random_9_10 = random.uniform(self.limites_x_espejo['min'], self.limites_x_espejo['max'])
+            # 2. CONTROL DE REFLEJO EN EJE X - CON RANGOS INDIVIDUALES
+            # Grupo 9-10 con reflejo en 8 y 11 - RANGO MÁS AMPLIO
+            random_9_10 = random.uniform(self.limites_grupo_9_10_x['min'], self.limites_grupo_9_10_x['max'])
             self.mover_grupo_9_10_x(random_9_10)
             
-            # Grupo 17-18 con reflejo en 16 y 19
-            random_17_18 = random.uniform(self.limites_x_espejo['min'], self.limites_x_espejo['max'])
+            # Grupo 17-18 con reflejo en 16 y 19 - RANGO MÁS CONSERVADOR
+            random_17_18 = random.uniform(self.limites_grupo_17_18_x['min'], self.limites_grupo_17_18_x['max'])
             self.mover_grupo_17_18_x(random_17_18)
             
             # 3. CONTROL ADICIONAL EN EJE Y (INDIVIDUAL)
@@ -124,7 +128,9 @@ class VertexController:
                 'par_10_11_y': random_10_11
             }
             
-            print("✅ DESPLAZAMIENTOS ALEATORIOS APLICADOS MANTENIENDO COHERENCIA DE GRUPOS")
+            print("✅ DESPLAZAMIENTOS ALEATORIOS APLICADOS CON RANGOS INDIVIDUALES")
+            print(f"   Grupo 9-10 X: {random_9_10:.3f} (rango: {self.limites_grupo_9_10_x['min']:.1f} a {self.limites_grupo_9_10_x['max']:.1f})")
+            print(f"   Grupo 17-18 X: {random_17_18:.3f} (rango: {self.limites_grupo_17_18_x['min']:.1f} a {self.limites_grupo_17_18_x['max']:.1f})")
             return desplazamientos
             
         except Exception as e:
@@ -149,14 +155,14 @@ class VertexController:
                     return True
         return False
 
-    # ===== FUNCIONES DE MOVIMIENTO EN X - CORREGIDAS =====
+    # ===== FUNCIONES DE MOVIMIENTO EN X - CON LÍMITES INDIVIDUALES =====
     
     def mover_grupo_9_10_x(self, desplazamiento):
         """Mover vértices [9:10] en eje X con reflejo en [8] y [11] - SOLO EJE X"""
         try:
-            # Aplicar límites específicos para este grupo
-            nuevo_desplazamiento = max(self.limites_x_espejo['min'],
-                                     min(self.limites_x_espejo['max'], desplazamiento))
+            # Aplicar límites ESPECÍFICOS para este grupo
+            nuevo_desplazamiento = max(self.limites_grupo_9_10_x['min'],
+                                     min(self.limites_grupo_9_10_x['max'], desplazamiento))
             
             # Calcular diferencia para movimiento relativo
             diferencia = nuevo_desplazamiento - self.desplazamiento_actual['grupo_9_10_x']
@@ -164,7 +170,7 @@ class VertexController:
             if abs(diferencia) < 0.001:
                 return
             
-            print(f"🔧 MOVIENDO GRUPO 9-10 X: diferencia={diferencia:.3f}")
+            print(f"🔧 MOVIENDO GRUPO 9-10 X: {nuevo_desplazamiento:.3f} (rango: {self.limites_grupo_9_10_x['min']:.1f} a {self.limites_grupo_9_10_x['max']:.1f})")
             
             # Grupo principal: [9:10] - SOLO estos vértices
             vertices_principales = [f"axioma_carro.vtx[{i}]" for i in [9, 10]]
@@ -198,9 +204,9 @@ class VertexController:
     def mover_grupo_17_18_x(self, desplazamiento):
         """Mover vértices [17:18] en eje X con reflejo en [16] y [19] - SOLO EJE X"""
         try:
-            # Aplicar límites específicos para este grupo
-            nuevo_desplazamiento = max(self.limites_x_espejo['min'],
-                                     min(self.limites_x_espejo['max'], desplazamiento))
+            # Aplicar límites ESPECÍFICOS para este grupo
+            nuevo_desplazamiento = max(self.limites_grupo_17_18_x['min'],
+                                     min(self.limites_grupo_17_18_x['max'], desplazamiento))
             
             # Calcular diferencia para movimiento relativo
             diferencia = nuevo_desplazamiento - self.desplazamiento_actual['grupo_17_18_x']
@@ -208,7 +214,7 @@ class VertexController:
             if abs(diferencia) < 0.001:
                 return
             
-            print(f"🔧 MOVIENDO GRUPO 17-18 X: diferencia={diferencia:.3f}")
+            print(f"🔧 MOVIENDO GRUPO 17-18 X: {nuevo_desplazamiento:.3f} (rango: {self.limites_grupo_17_18_x['min']:.1f} a {self.limites_grupo_17_18_x['max']:.1f})")
             
             # Grupo principal: [17:18] - SOLO estos vértices
             vertices_principales = [f"axioma_carro.vtx[{i}]" for i in [17, 18]]

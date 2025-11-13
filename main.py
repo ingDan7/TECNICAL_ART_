@@ -141,15 +141,124 @@
 #     traceback.print_exc()
 
 
+# import sys
+# import importlib
+# import os
+
+# PROJECT_PATH = r"C:\Users\danie\vscode-environment-for-maya\Carros"
+# MODULE_NAME = "Carros"
+
+# def reload_carros_modules():
+#     """Recarga todos los módulos de Carros manteniendo las referencias"""
+#     print("=" * 60)
+#     print("🔄 DEBUG - RECARGANDO MÓDULOS CARROS")
+#     print("=" * 60)
+    
+#     # Verificar y agregar path
+#     print(f"📁 PROJECT_PATH: {PROJECT_PATH}")
+#     if PROJECT_PATH not in sys.path:
+#         sys.path.append(PROJECT_PATH)
+#         print("✅ Ruta agregada a sys.path")
+    
+#     # Encontrar todos los módulos de Carros
+#     carros_modules = []
+#     for module_name in list(sys.modules.keys()):
+#         if module_name and ("Carros" in module_name or module_name.startswith("Carros")):
+#             carros_modules.append(module_name)
+    
+#     print(f"📦 Módulos Carros encontrados: {len(carros_modules)}")
+#     for module_name in carros_modules:
+#         print(f"   - {module_name}")
+    
+#     # Recargar módulos en orden inverso (dependencias primero)
+#     carros_modules.sort(reverse=True)
+    
+#     reloaded_modules = []
+#     for module_name in carros_modules:
+#         try:
+#             module = sys.modules[module_name]
+#             if hasattr(module, '__file__') and module.__file__:
+#                 importlib.reload(module)
+#                 reloaded_modules.append(module_name)
+#                 print(f"✅ Recargado: {module_name}")
+#         except Exception as e:
+#             print(f"⚠️  No se pudo recargar {module_name}: {e}")
+    
+#     # Importar módulo principal si no estaba cargado
+#     try:
+#         if MODULE_NAME not in sys.modules:
+#             main_module = importlib.import_module(MODULE_NAME)
+#             print(f"✅ Importado nuevo: {MODULE_NAME}")
+#         else:
+#             main_module = importlib.reload(sys.modules[MODULE_NAME])
+#             print(f"✅ Recargado principal: {MODULE_NAME}")
+            
+#         return main_module
+#     except Exception as e:
+#         print(f"❌ Error cargando módulo principal: {e}")
+#         import traceback
+#         traceback.print_exc()
+#         return None
+
+# def open_chasis_ui():
+#     """Abre la interfaz de chasis con los módulos recargados"""
+#     try:
+#         # Recargar todos los módulos
+#         main_module = reload_carros_modules()
+        
+#         if main_module is None:
+#             print("❌ No se pudo cargar el módulo principal")
+#             return
+        
+#         # Importar y ejecutar UI
+#         from Carros import ui_builder
+#         print(f"📍 ui_builder cargado desde: {ui_builder.__file__}")
+        
+#         # Cerrar UI existente si está abierta
+#         close_existing_ui()
+        
+#         print("🎯 Ejecutando open_chasis_ui()...")
+#         ui_builder.open_chasis_ui()
+        
+#         print("✅ Interfaz ejecutada correctamente con módulos actualizados")
+        
+#     except Exception as e:
+#         print(f"❌ Error: {e}")
+#         import traceback
+#         traceback.print_exc()
+
+# def close_existing_ui():
+#     """Cierra cualquier instancia previa de la UI"""
+#     try:
+#         # Buscar y cerrar ventanas existentes de chasis
+#         if 'ui_builder' in sys.modules:
+#             ui_builder = sys.modules['ui_builder']
+#             if hasattr(ui_builder, 'chasis_window') and ui_builder.chasis_window:
+#                 try:
+#                     ui_builder.chasis_window.deleteLater()
+#                     print("🗑️ Ventana anterior cerrada")
+#                 except:
+#                     pass
+#             ui_builder.chasis_window = None
+#     except Exception as e:
+#         print(f"⚠️  Error cerrando UI anterior: {e}")
+
+# # Ejecutar directamente
+# if __name__ == "__main__":
+#     open_chasis_ui()
+#     print("=" * 60)
+
+
 import sys
 import importlib
 import os
+import gc
 
 PROJECT_PATH = r"C:\Users\danie\vscode-environment-for-maya\Carros"
 MODULE_NAME = "Carros"
 
 def reload_carros_modules():
-    """Recarga todos los módulos de Carros manteniendo las referencias"""
+    """Recarga todos los módulos de Carros de manera más robusta"""
     print("=" * 60)
     print("🔄 DEBUG - RECARGANDO MÓDULOS CARROS")
     print("=" * 60)
@@ -157,7 +266,7 @@ def reload_carros_modules():
     # Verificar y agregar path
     print(f"📁 PROJECT_PATH: {PROJECT_PATH}")
     if PROJECT_PATH not in sys.path:
-        sys.path.append(PROJECT_PATH)
+        sys.path.insert(0, PROJECT_PATH)  # Insertar al inicio para prioridad
         print("✅ Ruta agregada a sys.path")
     
     # Encontrar todos los módulos de Carros
@@ -174,15 +283,37 @@ def reload_carros_modules():
     carros_modules.sort(reverse=True)
     
     reloaded_modules = []
+    failed_modules = []
+    
+    # Primera pasada: intentar recargar
     for module_name in carros_modules:
         try:
-            module = sys.modules[module_name]
-            if hasattr(module, '__file__') and module.__file__:
+            if module_name in sys.modules:
+                module = sys.modules[module_name]
                 importlib.reload(module)
                 reloaded_modules.append(module_name)
                 print(f"✅ Recargado: {module_name}")
         except Exception as e:
             print(f"⚠️  No se pudo recargar {module_name}: {e}")
+            failed_modules.append(module_name)
+    
+    # Segunda pasada: para módulos que fallaron, eliminar y reimportar
+    for module_name in failed_modules:
+        try:
+            if module_name in sys.modules:
+                # Eliminar del sys.modules
+                del sys.modules[module_name]
+                print(f"🗑️  Eliminado de cache: {module_name}")
+                
+                # Forzar garbage collection
+                gc.collect()
+                
+                # Reimportar
+                new_module = importlib.import_module(module_name)
+                reloaded_modules.append(module_name)
+                print(f"✅ Reimportado: {module_name}")
+        except Exception as e:
+            print(f"❌ Error crítico con {module_name}: {e}")
     
     # Importar módulo principal si no estaba cargado
     try:
@@ -200,9 +331,42 @@ def reload_carros_modules():
         traceback.print_exc()
         return None
 
+def cleanup_module_references():
+    """Limpia referencias específicas problemáticas"""
+    try:
+        # Limpiar referencias específicas que puedan causar conflictos
+        modules_to_clean = ['ui_builder', 'chasis_controller', 'car_utils']
+        
+        for module_name in modules_to_clean:
+            full_name = f"Carros.{module_name}"
+            if full_name in sys.modules:
+                # Guardar referencia antes de eliminar
+                old_module = sys.modules[full_name]
+                
+                # Eliminar del sys.modules
+                del sys.modules[full_name]
+                
+                # Limpiar atributos específicos si existen
+                if hasattr(old_module, 'chasis_window'):
+                    try:
+                        old_module.chasis_window = None
+                    except:
+                        pass
+                
+                print(f"🧹 Limpiada referencia: {full_name}")
+        
+        # Forzar garbage collection
+        gc.collect()
+        
+    except Exception as e:
+        print(f"⚠️  Error en cleanup: {e}")
+
 def open_chasis_ui():
     """Abre la interfaz de chasis con los módulos recargados"""
     try:
+        # Limpiar referencias antiguas primero
+        cleanup_module_references()
+        
         # Recargar todos los módulos
         main_module = reload_carros_modules()
         
@@ -210,12 +374,12 @@ def open_chasis_ui():
             print("❌ No se pudo cargar el módulo principal")
             return
         
-        # Importar y ejecutar UI
-        from Carros import ui_builder
-        print(f"📍 ui_builder cargado desde: {ui_builder.__file__}")
-        
         # Cerrar UI existente si está abierta
         close_existing_ui()
+        
+        # Importar y ejecutar UI después de la recarga
+        from Carros import ui_builder
+        print(f"📍 ui_builder cargado desde: {ui_builder.__file__}")
         
         print("🎯 Ejecutando open_chasis_ui()...")
         ui_builder.open_chasis_ui()
@@ -228,20 +392,37 @@ def open_chasis_ui():
         traceback.print_exc()
 
 def close_existing_ui():
-    """Cierra cualquier instancia previa de la UI"""
+    """Cierra cualquier instancia previa de la UI de manera más agresiva"""
     try:
-        # Buscar y cerrar ventanas existentes de chasis
-        if 'ui_builder' in sys.modules:
-            ui_builder = sys.modules['ui_builder']
-            if hasattr(ui_builder, 'chasis_window') and ui_builder.chasis_window:
+        # Buscar en todos los módulos posibles
+        for module_name in list(sys.modules.keys()):
+            if 'ui_builder' in module_name or 'Carros.ui_builder' in module_name:
                 try:
-                    ui_builder.chasis_window.deleteLater()
-                    print("🗑️ Ventana anterior cerrada")
-                except:
-                    pass
-            ui_builder.chasis_window = None
+                    module = sys.modules[module_name]
+                    if hasattr(module, 'chasis_window') and module.chasis_window:
+                        try:
+                            if hasattr(module.chasis_window, 'close'):
+                                module.chasis_window.close()
+                            if hasattr(module.chasis_window, 'deleteLater'):
+                                module.chasis_window.deleteLater()
+                            print("🗑️ Ventana anterior cerrada")
+                        except Exception as e:
+                            print(f"⚠️  Error cerrando ventana: {e}")
+                    # Limpiar la referencia
+                    module.chasis_window = None
+                except Exception as e:
+                    print(f"⚠️  Error accediendo a módulo {module_name}: {e}")
+        
+        # Limpiar garbage collection
+        gc.collect()
+                    
     except Exception as e:
         print(f"⚠️  Error cerrando UI anterior: {e}")
+
+def quick_reload():
+    """Función rápida para recargar durante desarrollo"""
+    print("⚡ RECARGA RÁPIDA EJECUTADA")
+    open_chasis_ui()
 
 # Ejecutar directamente
 if __name__ == "__main__":
