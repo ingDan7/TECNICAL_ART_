@@ -254,7 +254,8 @@ import importlib
 import os
 import gc
 
-PROJECT_PATH = r"C:\Users\danie\vscode-environment-for-maya\Carros"
+#PROJECT_PATH = r"C:\Users\danie\vscode-environment-for-maya\Carros"
+PROJECT_PATH = r"C:\Users\pc\Documents\Repositorios\TECNICAL_ART_"
 MODULE_NAME = "Carros"
 
 def reload_carros_modules():
