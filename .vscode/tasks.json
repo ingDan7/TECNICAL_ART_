@@ -8,7 +8,7 @@
       "args": [
         "run",
         "${workspaceFolder}/send2maya.py",
-        "${workspaceFolder}/main_ambiente.py"
+        "${workspaceFolder}/main.py"
       ],
       "group": {
         "kind": "build",

@@ -17,6 +17,23 @@ class RuedasController:
         # Callbacks
         self.on_ruedas_creadas = None
 
+    def _obtener_posicion_cara_inferior(self):
+        """Obtener la posición Y de la cara inferior del chasis (axioma_carro.f[3])"""
+        try:
+            cara_inferior = "axioma_carro.f[3]"
+            if cmds.objExists(cara_inferior):
+                # Obtener el bounding box de la cara inferior
+                bbox = cmds.xform(cara_inferior, query=True, boundingBox=True, worldSpace=True)
+                # bbox = [xmin, ymin, zmin, xmax, ymax, zmax]
+                # Para la cara inferior, nos interesa la Y máxima (parte superior de la cara)
+                return bbox[4]  # ymax del bounding box
+            else:
+                print("⚠️ No se encontró la cara inferior axioma_carro.f[3]")
+                return 0
+        except Exception as e:
+            print(f"⚠️ Error obteniendo posición cara inferior: {e}")
+            return 0
+
     def crear_ruedas(self, altura=None, radio=None, dimensiones_chasis=None):
         """Crear las 4 ruedas del vehículo CON EJES - MÉTODO PRINCIPAL"""
         try:
@@ -93,12 +110,88 @@ class RuedasController:
             print(f"⚠️ Error ajustando pivote de {rueda}: {e}")
             cmds.xform(rueda, centerPivots=True)
 
-    # ================================================================
-    # 🔧 MÉTODOS PRINCIPALES CORREGIDOS - USANDO SCALE DESDE PIVOTE
-    # ================================================================
+    def _crear_ejes_longitud_dinamica(self, altura_rueda, radio_rueda, dimensiones_chasis):
+        """Crear ejes con LONGITUD DINÁMICA basada en vértices de llantas - CORREGIDO"""
+        try:
+            if not dimensiones_chasis:
+                dimensiones_chasis = {
+                    'ancho': 3.0, 'largo': 6.0, 'alto': 1.5, 'posicion': [0, 0, 0]
+                }
+            
+            chasis_pos = dimensiones_chasis['posicion']
+            largo = dimensiones_chasis['largo']
+            
+            # Parámetros de ejes
+            radio_eje = max(0.1, radio_rueda * 0.25)
+            
+            print(f"🔧 Creando ejes con LONGITUD DINÁMICA - Radio: {radio_eje:.3f}")
+            
+            # Crear eje delantero
+            eje_delantero = cmds.polyCylinder(
+                radius=radio_eje,
+                height=1.0,  # Longitud temporal, se ajustará después
+                subdivisionsAxis=12,
+                subdivisionsHeight=1,
+                subdivisionsCaps=1,
+                axis=(1, 0, 0),
+                createUVs=2,
+                constructionHistory=True,
+                name="eje_delantero"
+            )
+            eje_delantero_name = eje_delantero[0]
+            
+            # Crear eje trasero
+            eje_trasero = cmds.polyCylinder(
+                radius=radio_eje,
+                height=1.0,  # Longitud temporal, se ajustará después
+                subdivisionsAxis=12,
+                subdivisionsHeight=1,
+                subdivisionsCaps=1,
+                axis=(1, 0, 0),
+                createUVs=2,
+                constructionHistory=True,
+                name="eje_trasero"
+            )
+            eje_trasero_name = eje_trasero[0]
+            
+            # OBTENER POSICIÓN Y DE LA CARA INFERIOR DEL CHASIS
+            y_cara_inferior = self._obtener_posicion_cara_inferior()
+            
+            # Posicionar ejes inicialmente - USANDO LA CARA INFERIOR COMO REFERENCIA
+            offset_longitudinal = largo * 0.23
+            
+            # Eje delantero - POSICIONAR EN LA MISMA Y QUE LA CARA INFERIOR
+            cmds.move(
+                chasis_pos[0], y_cara_inferior, chasis_pos[2] + offset_longitudinal,
+                eje_delantero_name, absolute=True
+            )
+            
+            # Eje trasero - POSICIONAR EN LA MISMA Y QUE LA CARA INFERIOR
+            cmds.move(
+                chasis_pos[0], y_cara_inferior, chasis_pos[2] - offset_longitudinal,
+                eje_trasero_name, absolute=True
+            )
+            
+            # Aplicar color rojo a los ejes
+            self._aplicar_color_simple(eje_delantero_name, [1.0, 0.0, 0.0])
+            self._aplicar_color_simple(eje_trasero_name, [1.0, 0.0, 0.0])
+            
+            # Guardar referencias
+            self.ejes = {
+                'delantero': eje_delantero_name,
+                'trasero': eje_trasero_name
+            }
+            
+            # AJUSTAR LONGITUD DINÁMICA DE EJES BASADA EN VÉRTICES
+            self._ajustar_longitud_ejes_dinamica()
+            
+            print("✅ EJES CREADOS CON LONGITUD DINÁMICA")
+            
+        except Exception as e:
+            print(f"⚠️ Error creando ejes: {e}")
 
     def ajustar_altura_ruedas(self, nueva_altura):
-        """Ajustar GROSOR de ruedas - USANDO SCALE DESDE PIVOTE (CORREGIDO)"""
+        """Ajustar GROSOR de ruedas - USANDO SCALE DESDE PIVOTE"""
         try:
             if not self.ruedas:
                 cmds.warning("No hay ruedas para ajustar")
@@ -110,7 +203,7 @@ class RuedasController:
             
             print(f"📏 AJUSTANDO GROSOR de ruedas: {altura_actual:.3f} → {nueva_altura:.3f}")
             
-            # ✅ USAR SCALE DESDE PIVOTE (como en el código original)
+            # ✅ USAR SCALE DESDE PIVOTE
             factor_grosor = nueva_altura / altura_actual
             
             for posicion, rueda in self.ruedas.items():
@@ -130,7 +223,7 @@ class RuedasController:
             return False
 
     def ajustar_radio_ruedas(self, nuevo_radio):
-        """Ajustar RADIO de ruedas - USANDO SCALE DESDE PIVOTE (CORREGIDO)"""
+        """Ajustar RADIO de ruedas - USANDO SCALE DESDE PIVOTE"""
         try:
             if not self.ruedas:
                 cmds.warning("No hay ruedas para ajustar")
@@ -142,7 +235,7 @@ class RuedasController:
             
             print(f"📏 AJUSTANDO RADIO de ruedas: {radio_actual:.3f} → {nuevo_radio:.3f}")
             
-            # ✅ USAR SCALE DESDE PIVOTE (como en el código original)
+            # ✅ USAR SCALE DESDE PIVOTE
             factor_radio = nuevo_radio / radio_actual
             
             for rueda in self.ruedas.values():
@@ -161,7 +254,7 @@ class RuedasController:
             return False
 
     def transformar_ruedas_existentes(self, nueva_altura=None, nuevo_radio=None, dimensiones_chasis=None):
-        """Transformar ruedas existentes - USANDO SCALE (CORREGIDO)"""
+        """Transformar ruedas existentes - USANDO SCALE"""
         if not self.ruedas:
             print("⚠️ No hay ruedas existentes para transformar")
             return False
@@ -194,7 +287,7 @@ class RuedasController:
             return False
 
     def aumentar_altura(self, incremento=0.1):
-        """Aumentar GROSOR de ruedas (hacer más anchas) - CORREGIDO"""
+        """Aumentar GROSOR de ruedas (hacer más anchas)"""
         if not self.ruedas:
             cmds.warning("Primero crea las ruedas")
             return None
@@ -208,7 +301,7 @@ class RuedasController:
         return None
     
     def disminuir_altura(self, decremento=0.1):
-        """Disminuir GROSOR de ruedas (hacer más delgadas) - CORREGIDO"""
+        """Disminuir GROSOR de ruedas (hacer más delgadas)"""
         if not self.ruedas:
             cmds.warning("Primero crea las ruedas")
             return None
@@ -220,10 +313,6 @@ class RuedasController:
             return nueva_altura
         
         return None
-
-    # ================================================================
-    # 📏 MÉTODOS PARA OBTENER DIMENSIONES ACTUALES (CORREGIDOS)
-    # ================================================================
 
     def obtener_altura_actual(self):
         """Obtener grosor actual de las ruedas - CONSIDERANDO ESCALA"""
@@ -273,92 +362,13 @@ class RuedasController:
         
         return 1.0
 
-    # ================================================================
-    # 🎯 MÉTODOS DE EJES (MANTENIDOS)
-    # ================================================================
-
-    def _crear_ejes_longitud_dinamica(self, altura_rueda, radio_rueda, dimensiones_chasis):
-        """Crear ejes con LONGITUD DINÁMICA basada en vértices de llantas"""
-        try:
-            if not dimensiones_chasis:
-                dimensiones_chasis = {
-                    'ancho': 3.0, 'largo': 6.0, 'alto': 1.5, 'posicion': [0, 0, 0]
-                }
-            
-            chasis_pos = dimensiones_chasis['posicion']
-            largo = dimensiones_chasis['largo']
-            
-            # Parámetros de ejes
-            radio_eje = max(0.1, radio_rueda * 0.25)
-            
-            print(f"🔧 Creando ejes con LONGITUD DINÁMICA - Radio: {radio_eje:.3f}")
-            
-            # Crear eje delantero
-            eje_delantero = cmds.polyCylinder(
-                radius=radio_eje,
-                height=1.0,  # Longitud temporal, se ajustará después
-                subdivisionsAxis=12,
-                subdivisionsHeight=1,
-                subdivisionsCaps=1,
-                axis=(1, 0, 0),
-                createUVs=2,
-                constructionHistory=True,
-                name="eje_delantero"
-            )
-            eje_delantero_name = eje_delantero[0]
-            
-            # Crear eje trasero
-            eje_trasero = cmds.polyCylinder(
-                radius=radio_eje,
-                height=1.0,  # Longitud temporal, se ajustará después
-                subdivisionsAxis=12,
-                subdivisionsHeight=1,
-                subdivisionsCaps=1,
-                axis=(1, 0, 0),
-                createUVs=2,
-                constructionHistory=True,
-                name="eje_trasero"
-            )
-            eje_trasero_name = eje_trasero[0]
-            
-            # Posicionar ejes inicialmente
-            offset_longitudinal = largo * 0.23
-            altura_eje = chasis_pos[1] - (dimensiones_chasis['alto'] / 2) + (altura_rueda / 2)
-            
-            # Eje delantero
-            cmds.move(
-                chasis_pos[0], altura_eje, chasis_pos[2] + offset_longitudinal,
-                eje_delantero_name, absolute=True
-            )
-            
-            # Eje trasero
-            cmds.move(
-                chasis_pos[0], altura_eje, chasis_pos[2] - offset_longitudinal,
-                eje_trasero_name, absolute=True
-            )
-            
-            # Aplicar color rojo a los ejes
-            self._aplicar_color_simple(eje_delantero_name, [1.0, 0.0, 0.0])
-            self._aplicar_color_simple(eje_trasero_name, [1.0, 0.0, 0.0])
-            
-            # Guardar referencias
-            self.ejes = {
-                'delantero': eje_delantero_name,
-                'trasero': eje_trasero_name
-            }
-            
-            # AJUSTAR LONGITUD DINÁMICA DE EJES BASADA EN VÉRTICES
-            self._ajustar_longitud_ejes_dinamica()
-            
-            print("✅ EJES CREADOS CON LONGITUD DINÁMICA")
-            
-        except Exception as e:
-            print(f"⚠️ Error creando ejes: {e}")
-
     def _ajustar_longitud_ejes_dinamica(self):
-        """AJUSTAR LONGITUD DE EJES DINÁMICAMENTE basado en vértices de llantas"""
+        """AJUSTAR LONGITUD DE EJES DINÁMICAMENTE basado en vértices de llantas - CORREGIDO"""
         try:
             print("📏 AJUSTANDO LONGITUD DINÁMICA DE EJES...")
+            
+            # OBTENER POSICIÓN Y DE LA CARA INFERIOR
+            y_cara_inferior = self._obtener_posicion_cara_inferior()
             
             # ================================================================
             # 1. AJUSTAR EJE TRASERO - VÉRTICES ESPECÍFICOS
@@ -370,12 +380,12 @@ class RuedasController:
                 
                 # VERIFICAR VÉRTICES ESPECÍFICOS
                 vertice_der_32 = f"{rueda_der}.vtx[32]"
-                vertice_izq_33 = f"{rueda_izq}.vtx[33]"
+                vertice_izq_32 = f"{rueda_izq}.vtx[32]"
                 
-                if cmds.objExists(vertice_der_32) and cmds.objExists(vertice_izq_33):
+                if cmds.objExists(vertice_der_32) and cmds.objExists(vertice_izq_32):
                     # Obtener posiciones de los vértices
                     pos_der = cmds.xform(vertice_der_32, query=True, translation=True, worldSpace=True)
-                    pos_izq = cmds.xform(vertice_izq_33, query=True, translation=True, worldSpace=True)
+                    pos_izq = cmds.xform(vertice_izq_32, query=True, translation=True, worldSpace=True)
                     
                     # Calcular distancia entre vértices (longitud necesaria del eje)
                     distancia = ((pos_der[0] - pos_izq[0])**2 + 
@@ -386,12 +396,11 @@ class RuedasController:
                     self._ajustar_longitud_eje(eje, distancia)
                     print(f"  ✅ Eje trasero - Longitud ajustada: {distancia:.3f}")
                     
-                    # Posicionar eje en el centro entre los vértices
+                    # Posicionar eje en el centro entre los vértices EN X y Z, pero usar Y DE LA CARA INFERIOR
                     centro_x = (pos_der[0] + pos_izq[0]) / 2
-                    centro_y = (pos_der[1] + pos_izq[1]) / 2
                     centro_z = (pos_der[2] + pos_izq[2]) / 2
                     
-                    cmds.move(centro_x, centro_y, centro_z, eje, absolute=True)
+                    cmds.move(centro_x, y_cara_inferior, centro_z, eje, absolute=True)
                     
                 else:
                     print("  ⚠️ Vértices no encontrados para eje trasero")
@@ -406,12 +415,12 @@ class RuedasController:
                 
                 # VERIFICAR VÉRTICES ESPECÍFICOS
                 vertice_der_32 = f"{rueda_der}.vtx[32]"
-                vertice_izq_33 = f"{rueda_izq}.vtx[33]"
+                vertice_izq_32 = f"{rueda_izq}.vtx[32]"
                 
-                if cmds.objExists(vertice_der_32) and cmds.objExists(vertice_izq_33):
+                if cmds.objExists(vertice_der_32) and cmds.objExists(vertice_izq_32):
                     # Obtener posiciones de los vértices
                     pos_der = cmds.xform(vertice_der_32, query=True, translation=True, worldSpace=True)
-                    pos_izq = cmds.xform(vertice_izq_33, query=True, translation=True, worldSpace=True)
+                    pos_izq = cmds.xform(vertice_izq_32, query=True, translation=True, worldSpace=True)
                     
                     # Calcular distancia entre vértices (longitud necesaria del eje)
                     distancia = ((pos_der[0] - pos_izq[0])**2 + 
@@ -422,12 +431,11 @@ class RuedasController:
                     self._ajustar_longitud_eje(eje, distancia)
                     print(f"  ✅ Eje delantero - Longitud ajustada: {distancia:.3f}")
                     
-                    # Posicionar eje en el centro entre los vértices
+                    # Posicionar eje en el centro entre los vértices EN X y Z, pero usar Y DE LA CARA INFERIOR
                     centro_x = (pos_der[0] + pos_izq[0]) / 2
-                    centro_y = (pos_der[1] + pos_izq[1]) / 2
                     centro_z = (pos_der[2] + pos_izq[2]) / 2
                     
-                    cmds.move(centro_x, centro_y, centro_z, eje, absolute=True)
+                    cmds.move(centro_x, y_cara_inferior, centro_z, eje, absolute=True)
                     
                 else:
                     print("  ⚠️ Vértices no encontrados para eje delantero")
@@ -461,12 +469,8 @@ class RuedasController:
             print(f"  ❌ Error ajustando longitud del eje {eje}: {e}")
             return False
 
-    # ================================================================
-    # 🎨 MÉTODOS AUXILIARES (MANTENIDOS)
-    # ================================================================
-
     def posicionar_ruedas(self, chasis_controller, tipo_posicion="todas"):
-        """Posicionar ruedas y actualizar ejes dinámicamente"""
+        """Posicionar ruedas y actualizar ejes dinámicamente - CORREGIDO DEFINITIVO"""
         if not self.ruedas:
             cmds.warning("⚠️ No hay ruedas para posicionar")
             return False
@@ -485,14 +489,22 @@ class RuedasController:
         
         print(f"📍 POSICIONANDO RUEDAS - Chasis: {ancho:.3f}x{alto:.3f}x{largo:.3f}")
         
-        # Calcular posiciones
+        # OBTENER POSICIÓN Y DE LA CARA INFERIOR DEL CHASIS
+        y_cara_inferior = self._obtener_posicion_cara_inferior()
+        print(f"🎯 Posición Y cara inferior: {y_cara_inferior:.3f}")
+        
+        # Calcular posiciones - USANDO LA MISMA Y PARA RUEDAS Y EJES
         MARGEN_LATERAL = 0.001
-        MARGEN_VERTICAL = 0.001
         PORCENTAJE_LONGITUDINAL = 0.23
         
         offset_lateral = radio_actual + MARGEN_LATERAL
         offset_longitudinal = largo * PORCENTAJE_LONGITUDINAL
-        altura_posicion = chasis_pos[1] - (alto / 2) + (altura_actual / 2) + MARGEN_VERTICAL
+        
+        # ✅ CORRECCIÓN CRÍTICA: USAR LA MISMA Y PARA RUEDAS Y EJES
+        # Esto asegura que los centros de las llantas coincidan con los ejes
+        altura_posicion = y_cara_inferior
+        
+        print(f"🎯 Altura ruedas y ejes: {altura_posicion:.3f} (MISMA POSICIÓN)")
         
         # Definir posiciones
         posiciones = {
@@ -612,3 +624,4 @@ class RuedasController:
         self.ejes = {}
         
         print("✅ RUEDAS Y EJES LIMPIADOS")
+

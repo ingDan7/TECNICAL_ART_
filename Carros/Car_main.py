@@ -5,6 +5,7 @@ from chasis_controller import ChasisController
 from ruedas_controller import RuedasController
 from extrusion_manager import ExtrusionManager
 from VertexController import VertexController 
+from ExtrusionController import ExtrusionController
 
 class ChasisConRuedas:
     def __init__(self):
@@ -14,7 +15,8 @@ class ChasisConRuedas:
         self.chasis_controller = ChasisController()
         self.ruedas_controller = RuedasController()
         self.extrusion_manager = ExtrusionManager()
-        self.vertex_controller = VertexController()  # CONTROLADOR DE VÉRTICES
+        self.extrusion_controller = ExtrusionController()
+        self.vertex_controller = VertexController()
         
         # Construir UI
         self.ui_builder = UIBuilder(
@@ -22,8 +24,8 @@ class ChasisConRuedas:
             self.chasis_controller,
             self.ruedas_controller,
             self.extrusion_manager,
-            self.vertex_controller,  # PASAR CONTROLADOR DE VÉRTICES
-            self  # Pasar referencia para callbacks - ESTO ES IMPORTANTE
+            self.vertex_controller,
+            self  # Pasar referencia para callbacks
         )
         
         # Conectar eventos
@@ -47,20 +49,13 @@ class ChasisConRuedas:
         try:
             if desplazamientos:
                 print(f"✅ Desplazamientos aplicados - Par 12-13 Y: {desplazamientos['par_12_13_y']:.3f}")
-                print(f"✅ Desplazamientos aplicados - Par 14-15 Y: {desplazamientos['par_14_15_y']:.3f}")
-                print(f"✅ Desplazamientos aplicados - Grupo 9-10 X: {desplazamientos['grupo_9_10_x']:.3f}")
-                print(f"✅ Desplazamientos aplicados - Grupo 17-18 X: {desplazamientos['grupo_17_18_x']:.3f}")
-                print(f"✅ Desplazamientos aplicados - Par 16-17 Y: {desplazamientos['par_16_17_y']:.3f}")
-                print(f"✅ Desplazamientos aplicados - Par 10-11 Y: {desplazamientos['par_10_11_y']:.3f}")
-                
-                # Actualizar sliders en la UI
                 self.ui_builder.actualizar_sliders_vertices(desplazamientos)
                 
         except Exception as e:
             print(f"⚠️ No se pudieron actualizar sliders de vértices: {e}")
     
     def emerger_carro(self):
-        """Función principal EMERGER - Crear o transformar carro existente CON VÉRTICES ALEATORIOS"""
+        """Función principal EMERGER - Crear o transformar carro existente"""
         try:
             print("🎲🎲🎲 PRESIONADO EMERGER - INICIANDO...")
             
@@ -101,6 +96,72 @@ class ChasisConRuedas:
         
         return carro_en_escena
     
+    def _desparentear_temporalmente(self):
+        """Desparentear temporalmente para transformaciones limpias"""
+        try:
+            print("🔓 DESPARENTEANDO TEMPORALMENTE PARA TRANSFORMACIONES...")
+            
+            # Lista de objetos a desparentear
+            objetos_a_desparentear = [
+                "rueda_delantera_izq", "rueda_delantera_der",
+                "rueda_trasera_izq", "rueda_trasera_der", 
+                "eje_delantero", "eje_trasero"
+            ]
+            
+            for obj in objetos_a_desparentear:
+                if cmds.objExists(obj):
+                    # Verificar si tiene parent
+                    parent_actual = cmds.listRelatives(obj, parent=True)
+                    if parent_actual:
+                        cmds.parent(obj, world=True)
+                        print(f"   🔓 {obj} desparenteado")
+            
+            print("✅ DESPARENTEO TEMPORAL COMPLETADO")
+            return True
+            
+        except Exception as e:
+            print(f"⚠️ Error en desparenteo temporal: {e}")
+            return False
+
+    def _recrear_jerarquia(self):
+        """Recrear la jerarquía después de las transformaciones"""
+        try:
+            print("🔗 RECREANDO JERARQUÍA DESPUÉS DE TRANSFORMACIONES...")
+            
+            # 1. PARENTEAR RUEDAS DELANTERAS AL EJE DELANTERO
+            if cmds.objExists("rueda_delantera_izq") and cmds.objExists("rueda_delantera_der") and cmds.objExists("eje_delantero"):
+                cmds.select(clear=True)
+                cmds.select("rueda_delantera_izq", replace=True)
+                cmds.select("rueda_delantera_der", add=True)
+                cmds.select("eje_delantero", add=True)
+                cmds.parent()
+                print("   ✅ Ruedas delanteras -> eje_delantero")
+            
+            # 2. PARENTEAR RUEDAS TRASERAS AL EJE TRASERO
+            if cmds.objExists("rueda_trasera_izq") and cmds.objExists("rueda_trasera_der") and cmds.objExists("eje_trasero"):
+                cmds.select(clear=True)
+                cmds.select("rueda_trasera_izq", replace=True)
+                cmds.select("rueda_trasera_der", add=True)
+                cmds.select("eje_trasero", add=True)
+                cmds.parent()
+                print("   ✅ Ruedas traseras -> eje_trasero")
+            
+            # 3. PARENTEAR EJES AL CHASIS
+            if cmds.objExists("eje_delantero") and cmds.objExists("eje_trasero") and cmds.objExists("axioma_carro"):
+                cmds.select(clear=True)
+                cmds.select("eje_delantero", replace=True)
+                cmds.select("eje_trasero", add=True)
+                cmds.select("axioma_carro", add=True)
+                cmds.parent()
+                print("   ✅ Ejes -> axioma_carro")
+            
+            print("✅✅✅ JERARQUÍA RECREADA EXITOSAMENTE")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error recreando jerarquía: {e}")
+            return False
+
     def _crear_nuevo_carro(self, dimensiones_chasis):
         print("🏗️ CREANDO CARRO DESDE CERO CON VÉRTICES ALEATORIOS...")
         
@@ -119,22 +180,11 @@ class ChasisConRuedas:
         # PRESERVAR POSICIONES Y INMEDIATAMENTE después de crear el cubo
         self.vertex_controller.preservar_posiciones_y_originales()
         
-        # DIAGNÓSTICO: Verificar vértices INMEDIATAMENTE después de crear el cubo
-        print("🔍 DIAGNÓSTICO: VÉRTICES DESPUÉS DE CREAR CUBO BASE")
-        self.vertex_controller.diagnosticar_vertices_problematicos("DESPUÉS DE CREAR CUBO")
-        
-        # APLICAR DESPLAZAMIENTOS ALEATORIOS A VÉRTICES ANTES DE EXTRUSIONES
-        print("🎲 APLICANDO DESPLAZAMIENTOS ALEATORIOS A VÉRTICES...")
-        desplazamientos = self.vertex_controller.aplicar_desplazamientos_aleatorios()
-        
-        # Resto del código...
-
-        # APLICAR DESPLAZAMIENTOS ALEATORIOS A VÉRTICES ANTES DE EXTRUSIONES
+        # APLICAR DESPLAZAMIENTOS ALEATORIOS A VÉRTICES
         print("🎲 APLICANDO DESPLAZAMIENTOS ALEATORIOS A VÉRTICES...")
         desplazamientos = self.vertex_controller.aplicar_desplazamientos_aleatorios_avanzados()
         if desplazamientos:
             print("✅ Vértices modificados aleatoriamente")
-            # Actualizar UI
             self.actualizar_sliders_vertices(desplazamientos)
         
         # Crear extrusiones con valores aleatorios
@@ -150,6 +200,20 @@ class ChasisConRuedas:
         self.ruedas_controller.crear_ruedas(dimensiones_chasis=dimensiones_chasis)
         self.ruedas_controller.posicionar_ruedas(self.chasis_controller, "todas")
         
+        # ✅✅✅ EJECUTAR EXTRUSIÓN AUTOMÁTICA EN LAS 4 RUEDAS Y CHASIS
+        print("🎯 EJECUTANDO EXTRUSIÓN AUTOMÁTICA...")
+        resultado_extrusion = self.extrusion_controller.aplicar_extrusion_automatica(
+            ruedas_controller=self.ruedas_controller
+        )
+        
+        if resultado_extrusion:
+            print("✅✅✅ EXTRUSIÓN AUTOMÁTICA APLICADA A LAS 4 RUEDAS")
+        else:
+            print("⚠️ Algunas extrusiones fallaron")
+        
+        # CREAR JERARQUÍA INICIAL
+        self._recrear_jerarquia()
+        
         return True
 
     def _transformar_carro_existente(self, dimensiones_chasis):
@@ -157,6 +221,9 @@ class ChasisConRuedas:
         print("🔄🔄🔄 TRANSFORMACIÓN COMPLETA CON VÉRTICES ALEATORIOS...")
         
         try:
+            # 🔓 PASO CRÍTICO: DESPARENTEAR ANTES DE TRANSFORMAR
+            self._desparentear_temporalmente()
+            
             # 1. TRANSFORMAR CHASIS BASE
             print(f"📏 TRANSFORMANDO CHASIS: {dimensiones_chasis['ancho']}x{dimensiones_chasis['alto']}x{dimensiones_chasis['largo']}")
             resultado_chasis = self.chasis_controller.transformar_chasis_existente(
@@ -174,7 +241,6 @@ class ChasisConRuedas:
             desplazamientos = self.vertex_controller.aplicar_desplazamientos_aleatorios()
             if desplazamientos:
                 print("✅ Vértices modificados aleatoriamente")
-                # Actualizar UI
                 self.actualizar_sliders_vertices(desplazamientos)
             
             # 3. TRANSFORMAR RUEDAS PROPORCIONALMENTE
@@ -188,7 +254,21 @@ class ChasisConRuedas:
                 self.ruedas_controller.crear_ruedas(dimensiones_chasis=dimensiones_chasis)
                 self.ruedas_controller.posicionar_ruedas(self.chasis_controller, "todas")
             
-            print("✅✅✅ TRANSFORMACIÓN COMPLETADA")
+            # ✅✅✅ EJECUTAR EXTRUSIÓN AUTOMÁTICA EN LAS 4 RUEDAS Y CHASIS
+            print("🎯 EJECUTANDO EXTRUSIÓN AUTOMÁTICA...")
+            resultado_extrusion = self.extrusion_controller.aplicar_extrusion_automatica(
+                ruedas_controller=self.ruedas_controller
+            )
+            
+            if resultado_extrusion:
+                print("✅✅✅ EXTRUSIÓN AUTOMÁTICA APLICADA A LAS 4 RUEDAS")
+            else:
+                print("⚠️ Algunas extrusiones fallaron")
+            
+            # 🔗 PASO CRÍTICO: VOLVER A CREAR JERARQUÍA DESPUÉS DE TRANSFORMAR
+            self._recrear_jerarquia()
+            
+            print("✅✅✅ TRANSFORMACIÓN COMPLETADA CON JERARQUÍA")
             return True
             
         except Exception as e:
@@ -196,6 +276,10 @@ class ChasisConRuedas:
             import traceback
             traceback.print_exc()
             return False
+    
+    def ejecutar_extrusion_automatica(self):
+        """Ejecutar extrusión automática"""
+        return self.extrusion_controller.aplicar_extrusion_automatica(self.ruedas_controller)
     
     def _limpiar_escena_silenciosa(self):
         """Limpia la escena sin mostrar mensajes"""

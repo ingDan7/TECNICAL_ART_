@@ -1,10 +1,5 @@
 import maya.cmds as cmds
 import traceback
-import random
-from .chasis_controller import ChasisController
-from .ruedas_controller import RuedasController
-from .extrusion_manager import ExtrusionManager
-from .VertexController import VertexController
 
 print("🔧 ui_builder.py CARGADO - Sistema Emerger Axioma")
 
@@ -25,6 +20,24 @@ class UIBuilder:
         self.extrusion_manager = extrusion_manager
         self.vertex_controller = vertex_controller
         self.main_app = main_app  # Puede ser None si se ejecuta solo
+        
+        # ✅ AGREGAR EXTRUSION CONTROLLER
+        self.extrusion_controller = self._crear_extrusion_controller_seguro()
+    
+    def _crear_extrusion_controller_seguro(self):
+        """Crear ExtrusionController de forma segura sin importaciones circulares"""
+        try:
+            # Intentar importar dinámicamente
+            from ExtrusionController import ExtrusionController
+            return ExtrusionController()
+        except ImportError as e:
+            print(f"⚠️ No se pudo crear ExtrusionController: {e}")
+            # Crear un objeto dummy que no cause errores
+            class DummyExtrusionController:
+                def aplicar_extrusion_automatica(self, *args, **kwargs):
+                    print("⚠️ ExtrusionController no disponible en modo standalone")
+                    return True  # Retornar True para evitar errores
+            return DummyExtrusionController()
 
     def _emerger_carro_desde_ui(self, *args):
         """Función que se llama desde el botón EMERGER en la UI"""
@@ -64,6 +77,7 @@ class UIBuilder:
         return (self.chasis_controller.cubo_actual is not None and 
                 cmds.objExists(self.chasis_controller.cubo_actual))
 
+
     def _crear_primer_carro_local(self):
         """Crear el primer carro con parámetros aleatorios (versión local)"""
         # Generar dimensiones aleatorias para el chasis
@@ -98,13 +112,31 @@ class UIBuilder:
             tamaño_ruedas['altura'], 
             tamaño_ruedas['radio']
         )
+
         self.ruedas_controller.posicionar_ruedas(self.chasis_controller, "todas")
+        
+        # ✅✅✅ EJECUTAR EXTRUSIÓN AUTOMÁTICA EN LAS 4 RUEDAS Y CHASIS
+        print("🎯 EJECUTANDO EXTRUSIÓN AUTOMÁTICA...")
+        resultado_extrusion = self.extrusion_controller.aplicar_extrusion_automatica(
+            ruedas_controller=self.ruedas_controller
+        )
+        
+        if resultado_extrusion:
+            print("✅✅✅ EXTRUSIÓN AUTOMÁTICA APLICADA A LAS 4 RUEDAS")
+        else:
+            print("⚠️ Algunas extrusiones fallaron")
+        
+        # CREAR JERARQUÍA DESDE UI_BUILDER
+        self._recrear_jerarquia_desde_ui()
         
         # Actualizar UI
         self._actualizar_ui_despues_emerger_local()
 
     def _transformar_carro_existente_local(self):
         """Transformar el carro existente con nuevos parámetros aleatorios (versión local)"""
+        # 🔓 DESPARENTEAR TEMPORALMENTE
+        self._desparentear_temporalmente_desde_ui()
+        
         # Regenerar dimensiones del chasis
         dimensiones = self.chasis_controller.generar_dimensiones_aleatorias()
         self.chasis_controller.transformar_chasis_existente(
@@ -135,6 +167,76 @@ class UIBuilder:
             )
             self.ruedas_controller.posicionar_ruedas(self.chasis_controller, "todas")
 
+        # ✅✅✅ EJECUTAR EXTRUSIÓN AUTOMÁTICA EN LAS 4 RUEDAS Y CHASIS
+        print("🎯 EJECUTANDO EXTRUSIÓN AUTOMÁTICA...")
+        resultado_extrusion = self.extrusion_controller.aplicar_extrusion_automatica(
+            ruedas_controller=self.ruedas_controller
+        )
+        
+        if resultado_extrusion:
+            print("✅✅✅ EXTRUSIÓN AUTOMÁTICA APLICADA A LAS 4 RUEDAS")
+        else:
+            print("⚠️ Algunas extrusiones fallaron")
+
+        # 🔗 RECREAR JERARQUÍA DESPUÉS DE TRANSFORMAR
+        self._recrear_jerarquia_desde_ui()
+
+    def _desparentear_temporalmente_desde_ui(self):
+        """Desparentear temporalmente desde UI Builder"""
+        try:
+            print("🔓 DESPARENTEANDO TEMPORALMENTE DESDE UI...")
+            
+            objetos_a_desparentear = [
+                "rueda_delantera_izq", "rueda_delantera_der",
+                "rueda_trasera_izq", "rueda_trasera_der", 
+                "eje_delantero", "eje_trasero"
+            ]
+            
+            for obj in objetos_a_desparentear:
+                if cmds.objExists(obj):
+                    parent_actual = cmds.listRelatives(obj, parent=True)
+                    if parent_actual:
+                        cmds.parent(obj, world=True)
+            
+            print("✅ DESPARENTEO TEMPORAL COMPLETADO DESDE UI")
+            
+        except Exception as e:
+            print(f"⚠️ Error en desparenteo temporal desde UI: {e}")
+
+    def _recrear_jerarquia_desde_ui(self):
+        """Recrear jerarquía desde UI Builder"""
+        try:
+            print("🔗 RECREANDO JERARQUÍA DESDE UI...")
+            
+            # 1. PARENTEAR RUEDAS DELANTERAS AL EJE DELANTERO
+            if cmds.objExists("rueda_delantera_izq") and cmds.objExists("rueda_delantera_der") and cmds.objExists("eje_delantero"):
+                cmds.select(clear=True)
+                cmds.select("rueda_delantera_izq", replace=True)
+                cmds.select("rueda_delantera_der", add=True)
+                cmds.select("eje_delantero", add=True)
+                cmds.parent()
+            
+            # 2. PARENTEAR RUEDAS TRASERAS AL EJE TRASERO
+            if cmds.objExists("rueda_trasera_izq") and cmds.objExists("rueda_trasera_der") and cmds.objExists("eje_trasero"):
+                cmds.select(clear=True)
+                cmds.select("rueda_trasera_izq", replace=True)
+                cmds.select("rueda_trasera_der", add=True)
+                cmds.select("eje_trasero", add=True)
+                cmds.parent()
+            
+            # 3. PARENTEAR EJES AL CHASIS
+            if cmds.objExists("eje_delantero") and cmds.objExists("eje_trasero") and cmds.objExists("axioma_carro"):
+                cmds.select(clear=True)
+                cmds.select("eje_delantero", replace=True)
+                cmds.select("eje_trasero", add=True)
+                cmds.select("axioma_carro", add=True)
+                cmds.parent()
+            
+            print("✅ JERARQUÍA RECREADA DESDE UI")
+            
+        except Exception as e:
+            print(f"⚠️ Error recreando jerarquía desde UI: {e}")
+
     def _actualizar_ui_despues_emerger_local(self):
         """Actualizar la UI después de emerger un carro (versión local)"""
         # Actualizar labels de extrusiones
@@ -147,6 +249,8 @@ class UIBuilder:
         if self.ruedas_controller.ruedas:
             altura_actual = self.ruedas_controller.obtener_altura_actual()
             self.actualizar_label_ruedas(altura_actual)
+
+
 
     # ===== FUNCIONES DE CONTROL DE VÉRTICES =====
 
@@ -553,6 +657,8 @@ class UIBuilder:
         # ===== CONTROL DE RUEDAS =====
         cmds.frameLayout(label="🎯 Control de Ruedas", collapsable=True, parent=main_layout)
         cmds.columnLayout(adjustableColumn=True, parent=main_layout)
+
+
         
         # Control de altura
         cmds.text("Altura de Ruedas:", align="left", parent=main_layout)
@@ -647,18 +753,32 @@ class UIBuilder:
         """Mostrar la ventana de la UI"""
         self.build_ui()
 
-# Función global para compatibilidad
+# ✅ NUEVA VERSIÓN SEGURA:
 def open_chasis_ui():
     """Abrir la interfaz de Axioma Carro - Sistema Emerger"""
-    # Crear controladores temporales para cuando se ejecuta solo
-    chasis_controller = ChasisController()
-    ruedas_controller = RuedasController()
-    extrusion_manager = ExtrusionManager()
-    vertex_controller = VertexController()
+    try:
+        # Importar dinámicamente para evitar importaciones circulares
+        from chasis_controller import ChasisController
+        from ruedas_controller import RuedasController
+        from extrusion_manager import ExtrusionManager
+        from VertexController import VertexController
+        
+        # Crear controladores temporales
+        chasis_controller = ChasisController()
+        ruedas_controller = RuedasController()
+        extrusion_manager = ExtrusionManager()
+        vertex_controller = VertexController()
+        
+        # Crear UI
+        ui_builder = UIBuilder("chasis_con_ruedas_ui", chasis_controller, ruedas_controller, extrusion_manager, vertex_controller, None)
+        ui_builder.mostrar_ventana()
+        
+    except ImportError as e:
+        cmds.warning(f"❌ Error importando controladores: {e}")
+        cmds.confirmDialog(title="Error", message=f"No se pudieron cargar los controladores:\n{e}", button=["OK"])
     
-    # Crear UI
-    ui_builder = UIBuilder("chasis_con_ruedas_ui", chasis_controller, ruedas_controller, extrusion_manager, vertex_controller, None)
-    ui_builder.mostrar_ventana()
 
 if __name__ == "__main__":
     open_chasis_ui()
+
+

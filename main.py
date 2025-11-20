@@ -140,379 +140,497 @@
 #     import traceback
 #     traceback.print_exc()
 
-# import sys
-# import importlib
-# import os
-# import gc
 
-# PROJECT_PATH = r"C:\Users\danie\vscode-environment-for-maya\Carros"
-# MODULE_NAME = "Carros"
 
-# def reload_carros_modules():
-#     """Recarga todos los módulos de Carros de manera más robusta"""
-#     print("=" * 60)
-#     print("🔄 DEBUG - RECARGANDO MÓDULOS CARROS")
-#     print("=" * 60)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import sys
+import importlib
+import os
+import maya.cmds as cmds
+
+# Configuración
+PROJECT_PATH = r"C:\Users\danie\vscode-environment-for-maya\rig_carros"
+
+def reload_rig_carros():
+    """Recarga completa y efectiva de todo el sistema rig_carros"""
+    print("🔄 Recargando sistema rig_carros...")
     
-#     # Verificar y agregar path
-#     print(f"📁 PROJECT_PATH: {PROJECT_PATH}")
-#     if PROJECT_PATH not in sys.path:
-#         sys.path.insert(0, PROJECT_PATH)  # Insertar al inicio para prioridad
-#         print("✅ Ruta agregada a sys.path")
+    # Agregar path si no existe
+    if PROJECT_PATH not in sys.path:
+        sys.path.insert(0, PROJECT_PATH)
+        print(f"📁 Path agregado: {PROJECT_PATH}")
     
-#     # Encontrar todos los módulos de Carros
-#     carros_modules = []
-#     for module_name in list(sys.modules.keys()):
-#         if module_name and ("Carros" in module_name or module_name.startswith("Carros")):
-#             carros_modules.append(module_name)
+    # Cerrar todas las UIs existentes del sistema
+    ui_windows = ["carro_rig_ui", "carro_rig_coordinator", "winRigCarro"]
+    for window in ui_windows:
+        if cmds.window(window, exists=True):
+            cmds.deleteUI(window)
+            print(f"✅ Ventana {window} cerrada")
     
-#     print(f"📦 Módulos Carros encontrados: {len(carros_modules)}")
-#     for module_name in carros_modules:
-#         print(f"   - {module_name}")
+    # Eliminar módulos existentes de forma segura
+    modules_to_remove = []
+    for module_name in list(sys.modules.keys()):
+        if module_name and ('rig_carros' in module_name or 'carro_rig' in module_name):
+            modules_to_remove.append(module_name)
     
-#     # Recargar módulos en orden inverso (dependencias primero)
-#     carros_modules.sort(reverse=True)
+    # Eliminar en orden inverso para evitar dependencias
+    modules_to_remove.sort(reverse=True)
+    for module_name in modules_to_remove:
+        try:
+            del sys.modules[module_name]
+            print(f"🗑️ Eliminado: {module_name}")
+        except Exception as e:
+            print(f"⚠️ No se pudo eliminar {module_name}: {e}")
     
-#     reloaded_modules = []
-#     failed_modules = []
+    try:
+        print("📦 Importando módulos frescos...")
+        
+        # Importar módulos en orden correcto
+        import rig_carros.carro_rig_utils as utils
+        importlib.reload(utils)
+        print("✅ carro_rig_utils recargado")
+        
+        import rig_carros.carro_rig_core as core
+        importlib.reload(core)
+        print("✅ carro_rig_core recargado")
+        
+        import rig_carros.carro_rig_ui as ui
+        importlib.reload(ui)
+        print("✅ carro_rig_ui recargado")
+        
+        import rig_carros.RigCarroManager as manager
+        importlib.reload(manager)
+        print("✅ RigCarroManager recargado")
+        
+        # Inicializar el sistema coordinador
+        from rig_carros.RigCarroManager import mostrar_interfaz_principal
+        mostrar_interfaz_principal()
+        
+        print("🎉 Sistema rig_carros recargado exitosamente!")
+        print("✅ Todos los callbacks conectados correctamente")
+        
+    except Exception as e:
+        print(f"❌ Error en recarga principal: {e}")
+        # Usar el fallback robusto
+        setup_ui_fallback()
+
+def setup_ui_fallback():
+    """Configuración de emergencia robusta"""
+    print("🆘 Configurando UI de emergencia...")
     
-#     # Primera pasada: intentar recargar
-#     for module_name in carros_modules:
-#         try:
-#             if module_name in sys.modules:
-#                 module = sys.modules[module_name]
-#                 importlib.reload(module)
-#                 reloaded_modules.append(module_name)
-#                 print(f"✅ Recargado: {module_name}")
-#         except Exception as e:
-#             print(f"⚠️  No se pudo recargar {module_name}: {e}")
-#             failed_modules.append(module_name)
-    
-#     # Segunda pasada: para módulos que fallaron, eliminar y reimportar
-#     for module_name in failed_modules:
-#         try:
-#             if module_name in sys.modules:
-#                 # Eliminar del sys.modules
-#                 del sys.modules[module_name]
-#                 print(f"🗑️  Eliminado de cache: {module_name}")
-                
-#                 # Forzar garbage collection
-#                 gc.collect()
-                
-#                 # Reimportar
-#                 new_module = importlib.import_module(module_name)
-#                 reloaded_modules.append(module_name)
-#                 print(f"✅ Reimportado: {module_name}")
-#         except Exception as e:
-#             print(f"❌ Error crítico con {module_name}: {e}")
-    
-#     # Importar módulo principal si no estaba cargado
-#     try:
-#         if MODULE_NAME not in sys.modules:
-#             main_module = importlib.import_module(MODULE_NAME)
-#             print(f"✅ Importado nuevo: {MODULE_NAME}")
-#         else:
-#             main_module = importlib.reload(sys.modules[MODULE_NAME])
-#             print(f"✅ Recargado principal: {MODULE_NAME}")
+    try:
+        # Cerrar UI existente
+        if cmds.window("carro_rig_ui", exists=True):
+            cmds.deleteUI("carro_rig_ui")
+        
+        # Importar módulos frescos
+        from rig_carros.carro_rig_ui import CarroRigUI
+        from rig_carros.carro_rig_core import CarroRigCore
+        from rig_carros.carro_rig_utils import buscar_objetos_escena_filtrado
+        
+        # Crear instancias
+        ui = CarroRigUI()
+        core = CarroRigCore()
+        
+        # Conectar callbacks manualmente
+        ui.on_crear_rig = lambda: crear_rig_manual(core)
+        ui.on_ajustar_rig = lambda: ajustar_rig_manual(core)
+        ui.on_limpiar_rig = lambda: limpiar_rig_manual(core)
+        ui.on_verificar_escena = lambda: verificar_escena_manual()
+        
+        ui.mostrar_interfaz_principal()
+        print("✅ UI de emergencia con callbacks manuales lista")
+        
+    except Exception as e:
+        print(f"❌ Error en UI de emergencia: {e}")
+        # Último recurso: UI básica sin callbacks
+        try:
+            from rig_carros.carro_rig_ui import mostrar_ui_standalone
+            mostrar_ui_standalone()
+            print("✅ UI standalone cargada (sin callbacks)")
+        except:
+            print("❌ Todas las opciones fallaron")
+
+def crear_rig_manual(core):
+    """Callback manual para crear rig"""
+    try:
+        from rig_carros.carro_rig_utils import buscar_objetos_escena_filtrado
+        chasis, ruedas, ejes = buscar_objetos_escena_filtrado()
+        
+        if not chasis:
+            cmds.confirmDialog(title="Error", message="❌ No se encontró chasis en la escena", button=["OK"])
+            return False
+        
+        resultado = core.crear_rig_completo(chasis, ruedas, ejes)
+        
+        if resultado:
+            cmds.confirmDialog(title="Éxito", message="✅ Rig creado correctamente", button=["OK"])
+        else:
+            cmds.confirmDialog(title="Error", message="❌ Error creando rig", button=["OK"])
             
-#         return main_module
-#     except Exception as e:
-#         print(f"❌ Error cargando módulo principal: {e}")
-#         import traceback
-#         traceback.print_exc()
-#         return None
+        return resultado
+    except Exception as e:
+        cmds.confirmDialog(title="Error", message=f"❌ Error: {str(e)}", button=["OK"])
+        return False
 
-# def cleanup_module_references():
-#     """Limpia referencias específicas problemáticas"""
-#     try:
-#         # Limpiar referencias específicas que puedan causar conflictos
-#         modules_to_clean = ['ui_builder', 'chasis_controller', 'car_utils']
-        
-#         for module_name in modules_to_clean:
-#             full_name = f"Carros.{module_name}"
-#             if full_name in sys.modules:
-#                 # Guardar referencia antes de eliminar
-#                 old_module = sys.modules[full_name]
-                
-#                 # Eliminar del sys.modules
-#                 del sys.modules[full_name]
-                
-#                 # Limpiar atributos específicos si existen
-#                 if hasattr(old_module, 'chasis_window'):
-#                     try:
-#                         old_module.chasis_window = None
-#                     except:
-#                         pass
-                
-#                 print(f"🧹 Limpiada referencia: {full_name}")
-        
-#         # Forzar garbage collection
-#         gc.collect()
-        
-#     except Exception as e:
-#         print(f"⚠️  Error en cleanup: {e}")
+def ajustar_rig_manual(core):
+    """Callback manual para ajustar rig"""
+    try:
+        resultado = core.ajustar_rig_existente()
+        if resultado:
+            cmds.confirmDialog(title="Éxito", message="✅ Rig ajustado correctamente", button=["OK"])
+        else:
+            cmds.confirmDialog(title="Error", message="❌ No se pudo ajustar el rig", button=["OK"])
+        return resultado
+    except Exception as e:
+        cmds.confirmDialog(title="Error", message=f"❌ Error: {str(e)}", button=["OK"])
+        return False
 
-# def open_chasis_ui():
-#     """Abre la interfaz de chasis con los módulos recargados"""
-#     try:
-#         # Limpiar referencias antiguas primero
-#         cleanup_module_references()
-        
-#         # Recargar todos los módulos
-#         main_module = reload_carros_modules()
-        
-#         if main_module is None:
-#             print("❌ No se pudo cargar el módulo principal")
-#             return
-        
-#         # Cerrar UI existente si está abierta
-#         close_existing_ui()
-        
-#         # Importar y ejecutar UI después de la recarga
-#         from Carros import ui_builder
-#         print(f"📍 ui_builder cargado desde: {ui_builder.__file__}")
-        
-#         print("🎯 Ejecutando open_chasis_ui()...")
-#         ui_builder.open_chasis_ui()
-        
-#         print("✅ Interfaz ejecutada correctamente con módulos actualizados")
-        
-#     except Exception as e:
-#         print(f"❌ Error: {e}")
-#         import traceback
-#         traceback.print_exc()
+def limpiar_rig_manual(core):
+    """Callback manual para limpiar rig"""
+    try:
+        elementos_eliminados = core.limpiar_rig_existente()
+        cmds.confirmDialog(
+            title="Limpieza Completa", 
+            message=f"✅ {elementos_eliminados} elementos eliminados", 
+            button=["OK"]
+        )
+        return elementos_eliminados
+    except Exception as e:
+        cmds.confirmDialog(title="Error", message=f"❌ Error: {str(e)}", button=["OK"])
+        return 0
 
-# def close_existing_ui():
-#     """Cierra cualquier instancia previa de la UI de manera más agresiva"""
-#     try:
-#         # Buscar en todos los módulos posibles
-#         for module_name in list(sys.modules.keys()):
-#             if 'ui_builder' in module_name or 'Carros.ui_builder' in module_name:
-#                 try:
-#                     module = sys.modules[module_name]
-#                     if hasattr(module, 'chasis_window') and module.chasis_window:
-#                         try:
-#                             if hasattr(module.chasis_window, 'close'):
-#                                 module.chasis_window.close()
-#                             if hasattr(module.chasis_window, 'deleteLater'):
-#                                 module.chasis_window.deleteLater()
-#                             print("🗑️ Ventana anterior cerrada")
-#                         except Exception as e:
-#                             print(f"⚠️  Error cerrando ventana: {e}")
-#                     # Limpiar la referencia
-#                     module.chasis_window = None
-#                 except Exception as e:
-#                     print(f"⚠️  Error accediendo a módulo {module_name}: {e}")
+def verificar_escena_manual():
+    """Callback manual para verificar escena"""
+    try:
+        from rig_carros.carro_rig_utils import buscar_objetos_escena_filtrado
+        chasis, ruedas, ejes = buscar_objetos_escena_filtrado()
         
-#         # Limpiar garbage collection
-#         gc.collect()
-                    
-#     except Exception as e:
-#         print(f"⚠️  Error cerrando UI anterior: {e}")
+        mensaje = "🔍 DIAGNÓSTICO DE ESCENA:\n\n"
+        
+        if chasis:
+            mensaje += f"✅ CHASIS: {chasis}\n"
+        else:
+            mensaje += "❌ CHASIS: No encontrado\n"
+        
+        mensaje += f"✅ RUEDAS: {len(ruedas)} encontradas\n"
+        for rueda in ruedas:
+            mensaje += f"   - {rueda}\n"
+        
+        mensaje += f"✅ EJES: {len(ejes)} encontrados\n"
+        for eje in ejes:
+            mensaje += f"   - {eje}\n"
+        
+        if cmds.objExists("RIG_CARRO_GRP"):
+            mensaje += "\n✅ RIG: Presente en escena\n"
+        else:
+            mensaje += "\n❌ RIG: No existe en escena\n"
+        
+        if len(ruedas) < 4:
+            mensaje += f"\n⚠️ Se recomiendan 4 ruedas (encontradas: {len(ruedas)})"
+        
+        cmds.confirmDialog(title="Diagnóstico de Escena", message=mensaje, button=["OK"])
+        
+    except Exception as e:
+        cmds.confirmDialog(title="Error", message=f"❌ Error verificando escena: {str(e)}", button=["OK"])
 
-# def quick_reload():
-#     """Función rápida para recargar durante desarrollo"""
-#     print("⚡ RECARGA RÁPIDA EJECUTADA")
-#     open_chasis_ui()
+def quick_reload():
+    """Recarga rápida - alias para hotkeys"""
+    reload_rig_carros()
 
-# # Ejecutar directamente
-# if __name__ == "__main__":
-#     open_chasis_ui()
-#     print("=" * 60)
-
-
-# import sys
-# import importlib
-# import os
-# import gc
-
-# PROJECT_PATH = r"C:\Users\danie\vscode-environment-for-maya\rig_carros"
-# MODULE_NAME = "rig_carros"
-
-# def reload_carro_rig_modules():
-#     """Recarga todos los módulos de rig_carros de manera robusta"""
-#     print("=" * 60)
-#     print("🔄 DEBUG - RECARGANDO MÓDULOS RIG_CARROS")
-#     print("=" * 60)
+def debug_system():
+    """Debug del sistema completo"""
+    print("\n🔍 DEBUG DEL SISTEMA:")
+    print(f"📁 PROJECT_PATH: {PROJECT_PATH}")
+    print(f"📁 En sys.path: {PROJECT_PATH in sys.path}")
     
-#     # Verificar y agregar path
-#     print(f"📁 PROJECT_PATH: {PROJECT_PATH}")
-#     if PROJECT_PATH not in sys.path:
-#         sys.path.insert(0, PROJECT_PATH)
-#         print("✅ Ruta agregada a sys.path")
+    # Verificar módulos
+    modules_to_check = [
+        'carro_rig_utils',
+        'carro_rig_core', 
+        'carro_rig_ui',
+        'RigCarroManager'
+    ]
     
-#     # Encontrar todos los módulos de rig_carros
-#     rig_carros_modules = []
-#     for module_name in list(sys.modules.keys()):
-#         if module_name and ("rig_carros" in module_name or module_name.startswith("rig_carros")):
-#             rig_carros_modules.append(module_name)
-    
-#     print(f"📦 Módulos rig_carros encontrados: {len(rig_carros_modules)}")
-#     for module_name in rig_carros_modules:
-#         print(f"   - {module_name}")
-    
-#     # Recargar módulos en orden inverso (dependencias primero)
-#     rig_carros_modules.sort(reverse=True)
-    
-#     reloaded_modules = []
-#     failed_modules = []
-    
-#     # Primera pasada: intentar recargar
-#     for module_name in rig_carros_modules:
-#         try:
-#             if module_name in sys.modules:
-#                 module = sys.modules[module_name]
-#                 importlib.reload(module)
-#                 reloaded_modules.append(module_name)
-#                 print(f"✅ Recargado: {module_name}")
-#         except Exception as e:
-#             print(f"⚠️  No se pudo recargar {module_name}: {e}")
-#             failed_modules.append(module_name)
-    
-#     # Segunda pasada: para módulos que fallaron, eliminar y reimportar
-#     for module_name in failed_modules:
-#         try:
-#             if module_name in sys.modules:
-#                 del sys.modules[module_name]
-#                 print(f"🗑️  Eliminado de cache: {module_name}")
-                
-#                 gc.collect()
-                
-#                 new_module = importlib.import_module(module_name)
-#                 reloaded_modules.append(module_name)
-#                 print(f"✅ Reimportado: {module_name}")
-#         except Exception as e:
-#             print(f"❌ Error crítico con {module_name}: {e}")
-    
-#     # Importar módulo principal si no estaba cargado
-#     try:
-#         if MODULE_NAME not in sys.modules:
-#             main_module = importlib.import_module(MODULE_NAME)
-#             print(f"✅ Importado nuevo: {MODULE_NAME}")
-#         else:
-#             main_module = importlib.reload(sys.modules[MODULE_NAME])
-#             print(f"✅ Recargado principal: {MODULE_NAME}")
-            
-#         return main_module
-#     except Exception as e:
-#         print(f"❌ Error cargando módulo principal: {e}")
-#         import traceback
-#         traceback.print_exc()
-#         return None
+    for module_name in modules_to_check:
+        full_name = f"rig_carros.{module_name}"
+        if full_name in sys.modules:
+            print(f"✅ {module_name}: CARGADO")
+        else:
+            print(f"❌ {module_name}: NO CARGADO")
 
-# def cleanup_module_references():
-#     """Limpia referencias específicas problemáticas"""
-#     try:
-#         # Limpiar referencias específicas que puedan causar conflictos
-#         modules_to_clean = ['carro_rig_ui', 'carro_rig_core', 'carro_rig_utils']
-        
-#         for module_name in modules_to_clean:
-#             full_name = f"rig_carros.{module_name}"
-#             if full_name in sys.modules:
-#                 old_module = sys.modules[full_name]
-#                 del sys.modules[full_name]
-                
-#                 # Limpiar atributos específicos si existen
-#                 if hasattr(old_module, 'rig_window'):
-#                     try:
-#                         old_module.rig_window = None
-#                     except:
-#                         pass
-                
-#                 print(f"🧹 Limpiada referencia: {full_name}")
-        
-#         gc.collect()
-        
-#     except Exception as e:
-#         print(f"⚠️  Error en cleanup: {e}")
+# Comandos rápidos
+def open_ui_simple():
+    """Abre la UI simple sin recargar todo"""
+    try:
+        from rig_carros.carro_rig_ui import mostrar_ui_standalone
+        mostrar_ui_standalone()
+    except Exception as e:
+        print(f"❌ Error abriendo UI simple: {e}")
 
-# def open_rig_ui():
-#     """Abre la interfaz de rig de carro con los módulos recargados"""
-#     try:
-#         # Limpiar referencias antiguas primero
-#         cleanup_module_references()
-        
-#         # Recargar todos los módulos
-#         main_module = reload_carro_rig_modules()
-        
-#         if main_module is None:
-#             print("❌ No se pudo cargar el módulo principal")
-#             return
-        
-#         # Cerrar UI existente si está abierta
-#         close_existing_ui()
-        
-#         # Importar y ejecutar UI después de la recarga
-#         from rig_carros import carro_rig_ui
-#         print(f"📍 carro_rig_ui cargado desde: {carro_rig_ui.__file__}")
-        
-#         print("🎯 Ejecutando ventana_rig_carro()...")
-#         carro_rig_ui.ventana_rig_carro()
-        
-#         print("✅ Interfaz ejecutada correctamente con módulos actualizados")
-        
-#     except Exception as e:
-#         print(f"❌ Error: {e}")
-#         import traceback
-#         traceback.print_exc()
+# Ejecutar
+if __name__ == "__main__":
+    reload_rig_carros()
 
-# def close_existing_ui():
-#     """Cierra cualquier instancia previa de la UI"""
-#     try:
-#         import maya.cmds as cmds
-#         if cmds.window("winRigCarro", exists=True):
-#             cmds.deleteUI("winRigCarro")
-#             print("🗑️ Ventana anterior cerrada")
-#     except Exception as e:
-#         print(f"⚠️  Error cerrando UI anterior: {e}")
 
-# def quick_reload():
-#     """Función rápida para recargar durante desarrollo"""
-#     print("⚡ RECARGA RÁPIDA EJECUTADA")
-#     open_rig_ui()
 
-# # Ejecutar directamente
-# if __name__ == "__main__":
-#     open_rig_ui()
-#     print("=" * 60)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import sys
 import importlib
 import os
 import gc
 
-PROJECT_PATH = r"C:\Users\danie\vscode-environment-for-maya\rig_carros"
-MODULE_NAME = "rig_carros"
+PROJECT_PATH = r"C:\Users\danie\vscode-environment-for-maya\Carros"
+MODULE_NAME = "Carros"
 
-def reload_carro_rig_modules():
-    """Recarga todos los módulos de rig_carros de manera robusta"""
+def reload_carros_modules():
+    """Recarga todos los módulos de Carros de manera más robusta"""
     print("=" * 60)
-    print("🔄 DEBUG - RECARGANDO MÓDULOS RIG_CARROS")
+    print("🔄 DEBUG - RECARGANDO MÓDULOS CARROS")
     print("=" * 60)
     
     # Verificar y agregar path
     print(f"📁 PROJECT_PATH: {PROJECT_PATH}")
     if PROJECT_PATH not in sys.path:
-        sys.path.insert(0, PROJECT_PATH)
+        sys.path.insert(0, PROJECT_PATH)  # Insertar al inicio para prioridad
         print("✅ Ruta agregada a sys.path")
     
-    # Encontrar todos los módulos de rig_carros
-    rig_carros_modules = []
+    # Encontrar todos los módulos de Carros
+    carros_modules = []
     for module_name in list(sys.modules.keys()):
-        if module_name and ("rig_carros" in module_name or module_name.startswith("rig_carros")):
-            rig_carros_modules.append(module_name)
+        if module_name and ("Carros" in module_name or module_name.startswith("Carros")):
+            carros_modules.append(module_name)
     
-    print(f"📦 Módulos rig_carros encontrados: {len(rig_carros_modules)}")
-    for module_name in rig_carros_modules:
+    print(f"📦 Módulos Carros encontrados: {len(carros_modules)}")
+    for module_name in carros_modules:
         print(f"   - {module_name}")
     
     # Recargar módulos en orden inverso (dependencias primero)
-    rig_carros_modules.sort(reverse=True)
+    carros_modules.sort(reverse=True)
     
     reloaded_modules = []
     failed_modules = []
     
     # Primera pasada: intentar recargar
-    for module_name in rig_carros_modules:
+    for module_name in carros_modules:
         try:
             if module_name in sys.modules:
                 module = sys.modules[module_name]
@@ -527,11 +645,14 @@ def reload_carro_rig_modules():
     for module_name in failed_modules:
         try:
             if module_name in sys.modules:
+                # Eliminar del sys.modules
                 del sys.modules[module_name]
                 print(f"🗑️  Eliminado de cache: {module_name}")
                 
+                # Forzar garbage collection
                 gc.collect()
                 
+                # Reimportar
                 new_module = importlib.import_module(module_name)
                 reloaded_modules.append(module_name)
                 print(f"✅ Reimportado: {module_name}")
@@ -558,36 +679,40 @@ def cleanup_module_references():
     """Limpia referencias específicas problemáticas"""
     try:
         # Limpiar referencias específicas que puedan causar conflictos
-        modules_to_clean = ['carro_rig_ui', 'carro_rig_core', 'carro_rig_utils']
+        modules_to_clean = ['ui_builder', 'chasis_controller', 'car_utils']
         
         for module_name in modules_to_clean:
-            full_name = f"rig_carros.{module_name}"
+            full_name = f"Carros.{module_name}"
             if full_name in sys.modules:
+                # Guardar referencia antes de eliminar
                 old_module = sys.modules[full_name]
+                
+                # Eliminar del sys.modules
                 del sys.modules[full_name]
                 
                 # Limpiar atributos específicos si existen
-                if hasattr(old_module, 'rig_window'):
+                if hasattr(old_module, 'chasis_window'):
                     try:
-                        old_module.rig_window = None
+                        old_module.chasis_window = None
                     except:
                         pass
                 
                 print(f"🧹 Limpiada referencia: {full_name}")
         
+        # Forzar garbage collection
         gc.collect()
         
     except Exception as e:
         print(f"⚠️  Error en cleanup: {e}")
 
-def open_rig_ui():
-    """Abre la interfaz de rig de carro con los módulos recargados"""
+def open_chasis_ui():
+    """Abre la interfaz de chasis con los módulos recargados"""
     try:
         # Limpiar referencias antiguas primero
         cleanup_module_references()
         
         # Recargar todos los módulos
-        main_module = reload_carro_rig_modules()
+        main_module = reload_carros_modules()
         
         if main_module is None:
             print("❌ No se pudo cargar el módulo principal")
@@ -597,11 +722,11 @@ def open_rig_ui():
         close_existing_ui()
         
         # Importar y ejecutar UI después de la recarga
-        from rig_carros import carro_rig_ui
-        print(f"📍 carro_rig_ui cargado desde: {carro_rig_ui.__file__}")
+        from Carros import ui_builder
+        print(f"📍 ui_builder cargado desde: {ui_builder.__file__}")
         
-        print("🎯 Ejecutando ventana_rig_carro()...")
-        carro_rig_ui.ventana_rig_carro()
+        print("🎯 Ejecutando open_chasis_ui()...")
+        ui_builder.open_chasis_ui()
         
         print("✅ Interfaz ejecutada correctamente con módulos actualizados")
         
@@ -611,97 +736,41 @@ def open_rig_ui():
         traceback.print_exc()
 
 def close_existing_ui():
-    """Cierra cualquier instancia previa de la UI"""
+    """Cierra cualquier instancia previa de la UI de manera más agresiva"""
     try:
-        import maya.cmds as cmds
-        if cmds.window("winRigCarro", exists=True):
-            cmds.deleteUI("winRigCarro")
-            print("🗑️ Ventana anterior cerrada")
+        # Buscar en todos los módulos posibles
+        for module_name in list(sys.modules.keys()):
+            if 'ui_builder' in module_name or 'Carros.ui_builder' in module_name:
+                try:
+                    module = sys.modules[module_name]
+                    if hasattr(module, 'chasis_window') and module.chasis_window:
+                        try:
+                            if hasattr(module.chasis_window, 'close'):
+                                module.chasis_window.close()
+                            if hasattr(module.chasis_window, 'deleteLater'):
+                                module.chasis_window.deleteLater()
+                            print("🗑️ Ventana anterior cerrada")
+                        except Exception as e:
+                            print(f"⚠️  Error cerrando ventana: {e}")
+                    # Limpiar la referencia
+                    module.chasis_window = None
+                except Exception as e:
+                    print(f"⚠️  Error accediendo a módulo {module_name}: {e}")
+        
+        # Limpiar garbage collection
+        gc.collect()
+                    
     except Exception as e:
         print(f"⚠️  Error cerrando UI anterior: {e}")
-
-def verificar_rig_actual():
-    """Verifica el estado actual del rig en escena"""
-    try:
-        import maya.cmds as cmds
-        from rig_carros.carro_rig_utils import buscar_objetos_escena
-        
-        chasis, ruedas = buscar_objetos_escena()
-        rig_existe = cmds.objExists("RIG_CARRO_GRP")
-        
-        print("🔍 ESTADO ACTUAL DEL RIG:")
-        print(f"   - Rig en escena: {'✅' if rig_existe else '❌'}")
-        print(f"   - Chasis encontrado: {'✅ ' + chasis if chasis else '❌'}")
-        print(f"   - Ruedas encontradas: {len(ruedas)}")
-        
-        if rig_existe:
-            print("   - Estado: LISTO para ajustar o limpiar")
-        else:
-            print("   - Estado: LISTO para generar nuevo rig")
-            
-    except Exception as e:
-        print(f"⚠️  Error en verificación: {e}")
 
 def quick_reload():
     """Función rápida para recargar durante desarrollo"""
     print("⚡ RECARGA RÁPIDA EJECUTADA")
-    open_rig_ui()
-
-def crear_rig_directo():
-    """Crea el rig directamente sin abrir la UI"""
-    try:
-        from rig_carros.carro_rig_core import crear_rig_carro
-        print("🚗 CREANDO RIG DIRECTAMENTE...")
-        crear_rig_carro()
-    except Exception as e:
-        print(f"❌ Error creando rig: {e}")
-
-def ajustar_rig_directo():
-    """Ajusta el rig existente directamente"""
-    try:
-        from rig_carros.carro_rig_core import ajustar_rig_existente
-        print("🎯 AJUSTANDO RIG EXISTENTE...")
-        ajustar_rig_existente()
-    except Exception as e:
-        print(f"❌ Error ajustando rig: {e}")
-
-def limpiar_rig_directo():
-    """Limpia el rig existente directamente"""
-    try:
-        from rig_carros.carro_rig_core import limpiar_rig_existente
-        print("🧹 LIMPIANDO RIG EXISTENTE...")
-        elementos = limpiar_rig_existente()
-        print(f"✅ Elementos eliminados: {elementos}")
-    except Exception as e:
-        print(f"❌ Error limpiando rig: {e}")
-
-# Comandos rápidos para desarrollo
-COMANDOS_RAPIDOS = {
-    'ui': open_rig_ui,
-    'reload': quick_reload,
-    'crear': crear_rig_directo,
-    'ajustar': ajustar_rig_directo,
-    'limpiar': limpiar_rig_directo,
-    'verificar': verificar_rig_actual
-}
-
-def ejecutar_comando_rapido(comando):
-    """Ejecuta un comando rápido desde la línea de comandos"""
-    if comando in COMANDOS_RAPIDOS:
-        print(f"⚡ Ejecutando comando: {comando}")
-        COMANDOS_RAPIDOS[comando]()
-    else:
-        print(f"❌ Comando no reconocido: {comando}")
-        print("Comandos disponibles: " + ", ".join(COMANDOS_RAPIDOS.keys()))
+    open_chasis_ui()
 
 # Ejecutar directamente
 if __name__ == "__main__":
-    # Si se pasa un argumento, ejecutar comando rápido
-    if len(sys.argv) > 1:
-        ejecutar_comando_rapido(sys.argv[1])
-    else:
-        open_rig_ui()
-        print("=" * 60)
-        print("💡 Usa: main.py [comando]")
-        print("   Comandos: ui, reload, crear, ajustar, limpiar, verificar")
-        print("=" * 60)
+    open_chasis_ui()
+    print("=" * 60)
+
+
