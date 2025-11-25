@@ -1,45 +1,3 @@
-# # """
-# # Carro Rig - Sistema para crear rigs de vehículos en Maya
-# # """
-
-# # __version__ = "1.0.0"
-# # __author__ = "Tu Nombre"
-
-# # # Importar las funciones principales que SÍ existen
-# # from .carro_rig_ui import CarroRigUI, mostrar_ui_standalone
-# # from .carro_rig_core import CarroRigCore
-# # from .RigCarroManager import mostrar_interfaz_principal, inicializar_sistema
-
-# # # Usar funciones que realmente existen
-# # __all__ = ["CarroRigUI", "CarroRigCore", "mostrar_interfaz_principal", "mostrar_ui_standalone"]
-
-# """
-# Carro Rig - Sistema para crear rigs de vehículos en Maya
-# """
-
-# __version__ = "1.0.0"
-# __author__ = "Tu Nombre"
-
-# # Importar SOLO las funciones que REALMENTE existen
-# from .carro_rig_ui import CarroRigUI, mostrar_ui_standalone
-# from .carro_rig_core import CarroRigCoreSimple, crear_rig_carro, limpiar_rig_existente, optimizar_pesos_rig
-# from .carro_rig_utils import buscar_objetos_escena_filtrado, NOMBRES_ESTANDAR
-# from .RigCarroManager import mostrar_interfaz_principal, inicializar_sistema
-
-# # Usar funciones que realmente existen
-# __all__ = [
-#     "CarroRigUI", 
-#     "CarroRigCoreSimple", 
-#     "crear_rig_carro", 
-#     "limpiar_rig_existente", 
-#     "optimizar_pesos_rig",
-#     "buscar_objetos_escena_filtrado", 
-#     "NOMBRES_ESTANDAR",
-#     "mostrar_interfaz_principal",
-#     "mostrar_ui_standalone",
-#     "inicializar_sistema"
-# ]
-
 """
 Carro Rig - Sistema para crear rigs de vehículos en Maya
 """
@@ -47,22 +5,37 @@ Carro Rig - Sistema para crear rigs de vehículos en Maya
 __version__ = "1.0.0"
 __author__ = "Tu Nombre"
 
-# Importar las funciones optimizadas
+# Importar SOLO las funciones que realmente existen
 from .carro_rig_ui import CarroRigUI, mostrar_ui_standalone
-from .carro_rig_core import CarroRigCoreOptimizado, crear_rig_carro, limpiar_rig_existente, optimizar_pesos_rig
-from .carro_rig_utils import buscar_objetos_escena_filtrado, NOMBRES_ESTANDAR
-from .RigCarroManager import mostrar_interfaz_principal, inicializar_sistema
+from .carro_rig_core import CarroRigCore
 
-# Usar funciones optimizadas
+# NO importar funciones que no existen en RigCarroManager
+# En su lugar, definir funciones básicas aquí mismo
+
+def mostrar_interfaz_principal():
+    """Función básica para mostrar la interfaz - definida localmente"""
+    try:
+        from .carro_rig_ui import mostrar_ui_standalone
+        mostrar_ui_standalone()
+        return True
+    except Exception as e:
+        print(f"❌ Error mostrando interfaz: {e}")
+        return False
+
+def inicializar_sistema():
+    """Función básica para inicializar el sistema - definida localmente"""
+    try:
+        print("🚗 Sistema Rig Carro inicializado")
+        return True
+    except Exception as e:
+        print(f"❌ Error inicializando sistema: {e}")
+        return False
+
+# Solo exportar lo que realmente existe
 __all__ = [
     "CarroRigUI", 
-    "CarroRigCoreOptimizado",  # ← ACTUALIZADO
-    "crear_rig_carro", 
-    "limpiar_rig_existente", 
-    "optimizar_pesos_rig",
-    "buscar_objetos_escena_filtrado", 
-    "NOMBRES_ESTANDAR",
-    "mostrar_interfaz_principal",
+    "CarroRigCore", 
     "mostrar_ui_standalone",
-    "inicializar_sistema"
+    "mostrar_interfaz_principal",  # Ahora existe localmente
+    "inicializar_sistema"          # Ahora existe localmente
 ]
