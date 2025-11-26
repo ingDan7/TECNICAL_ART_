@@ -31,7 +31,9 @@ def aplicar_shader_toon_carro():
         "rueda_trasera_der",
         "rueda_trasera_izq",
         "rueda_delantera_der",
-        "rueda_delantera_izq"
+        "rueda_delantera_izq", 
+        "eje_trasero",
+        "eje_delantero"
     ]
 
     material = "Pastel:lambert2"
