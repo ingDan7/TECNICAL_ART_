@@ -182,8 +182,8 @@ class RuedasController:
                 'trasero': eje_trasero_name
             }
             
-            # AJUSTAR LONGITUD DINÁMICA DE EJES BASADA EN VÉRTICES
-            self._ajustar_longitud_ejes_dinamica()
+            # # AJUSTAR LONGITUD DINÁMICA DE EJES BASADA EN VÉRTICES
+            # self._ajustar_longitud_ejes_dinamica()
             
             print("✅ EJES CREADOS CON LONGITUD DINÁMICA")
             
@@ -378,32 +378,32 @@ class RuedasController:
                 rueda_izq = self.ruedas['trasera_izq']
                 eje = self.ejes['trasero']
                 
-                # VERIFICAR VÉRTICES ESPECÍFICOS
-                vertice_der_32 = f"{rueda_der}.vtx[32]"
-                vertice_izq_32 = f"{rueda_izq}.vtx[32]"
+                # Usaremos el vertice 32 de la tapa INTERNA (pivote) como referencia
+                # NOTA: Los índices de vértices pueden variar, pero 32 es común para cilindros
+                vertice_der = f"{rueda_der}.vtx[32]" 
+                vertice_izq = f"{rueda_izq}.vtx[32]"
                 
-                if cmds.objExists(vertice_der_32) and cmds.objExists(vertice_izq_32):
-                    # Obtener posiciones de los vértices
-                    pos_der = cmds.xform(vertice_der_32, query=True, translation=True, worldSpace=True)
-                    pos_izq = cmds.xform(vertice_izq_32, query=True, translation=True, worldSpace=True)
+                if cmds.objExists(vertice_der) and cmds.objExists(vertice_izq):
+                    # Obtener posiciones de los vértices en World Space
+                    pos_der = cmds.xform(vertice_der, query=True, translation=True, worldSpace=True)
+                    pos_izq = cmds.xform(vertice_izq, query=True, translation=True, worldSpace=True)
                     
-                    # Calcular distancia entre vértices (longitud necesaria del eje)
-                    distancia = ((pos_der[0] - pos_izq[0])**2 + 
-                                (pos_der[1] - pos_izq[1])**2 + 
-                                (pos_der[2] - pos_izq[2])**2)**0.5
+                    # Calcular distancia en X (longitud del eje)
+                    # Tomamos el valor absoluto de la diferencia en X
+                    distancia_x = abs(pos_der[0] - pos_izq[0]) 
                     
                     # Ajustar longitud del eje trasero
-                    self._ajustar_longitud_eje(eje, distancia)
-                    print(f"  ✅ Eje trasero - Longitud ajustada: {distancia:.3f}")
+                    self._ajustar_longitud_eje(eje, distancia_x)
+                    print(f"  ✅ Eje trasero - Longitud ajustada: {distancia_x:.3f}")
                     
-                    # Posicionar eje en el centro entre los vértices EN X y Z, pero usar Y DE LA CARA INFERIOR
+                    # Posicionar eje en el centro en X y Z, y en la Y de la cara inferior
                     centro_x = (pos_der[0] + pos_izq[0]) / 2
                     centro_z = (pos_der[2] + pos_izq[2]) / 2
                     
                     cmds.move(centro_x, y_cara_inferior, centro_z, eje, absolute=True)
                     
                 else:
-                    print("  ⚠️ Vértices no encontrados para eje trasero")
+                    print("  ⚠️ Vértices no encontrados para eje trasero (Asegúrate de que las ruedas sean 'polyCylinder')")
             
             # ================================================================
             # 2. AJUSTAR EJE DELANTERO - VÉRTICES ESPECÍFICOS
@@ -413,32 +413,30 @@ class RuedasController:
                 rueda_izq = self.ruedas['delantera_izq']
                 eje = self.ejes['delantero']
                 
-                # VERIFICAR VÉRTICES ESPECÍFICOS
-                vertice_der_32 = f"{rueda_der}.vtx[32]"
-                vertice_izq_32 = f"{rueda_izq}.vtx[32]"
+                # Usaremos el vertice 32 de la tapa INTERNA (pivote) como referencia
+                vertice_der = f"{rueda_der}.vtx[32]"
+                vertice_izq = f"{rueda_izq}.vtx[32]"
                 
-                if cmds.objExists(vertice_der_32) and cmds.objExists(vertice_izq_32):
-                    # Obtener posiciones de los vértices
-                    pos_der = cmds.xform(vertice_der_32, query=True, translation=True, worldSpace=True)
-                    pos_izq = cmds.xform(vertice_izq_32, query=True, translation=True, worldSpace=True)
+                if cmds.objExists(vertice_der) and cmds.objExists(vertice_izq):
+                    # Obtener posiciones de los vértices en World Space
+                    pos_der = cmds.xform(vertice_der, query=True, translation=True, worldSpace=True)
+                    pos_izq = cmds.xform(vertice_izq, query=True, translation=True, worldSpace=True)
                     
-                    # Calcular distancia entre vértices (longitud necesaria del eje)
-                    distancia = ((pos_der[0] - pos_izq[0])**2 + 
-                                (pos_der[1] - pos_izq[1])**2 + 
-                                (pos_der[2] - pos_izq[2])**2)**0.5
+                    # Calcular distancia en X (longitud del eje)
+                    distancia_x = abs(pos_der[0] - pos_izq[0]) 
                     
                     # Ajustar longitud del eje delantero
-                    self._ajustar_longitud_eje(eje, distancia)
-                    print(f"  ✅ Eje delantero - Longitud ajustada: {distancia:.3f}")
+                    self._ajustar_longitud_eje(eje, distancia_x)
+                    print(f"  ✅ Eje delantero - Longitud ajustada: {distancia_x:.3f}")
                     
-                    # Posicionar eje en el centro entre los vértices EN X y Z, pero usar Y DE LA CARA INFERIOR
+                    # Posicionar eje en el centro en X y Z, y en la Y de la cara inferior
                     centro_x = (pos_der[0] + pos_izq[0]) / 2
                     centro_z = (pos_der[2] + pos_izq[2]) / 2
                     
                     cmds.move(centro_x, y_cara_inferior, centro_z, eje, absolute=True)
                     
                 else:
-                    print("  ⚠️ Vértices no encontrados para eje delantero")
+                    print("  ⚠️ Vértices no encontrados para eje delantero (Asegúrate de que las ruedas sean 'polyCylinder')")
             
             print("🎯 LONGITUD DE EJES AJUSTADA DINÁMICAMENTE")
             
