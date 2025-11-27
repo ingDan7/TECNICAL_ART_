@@ -576,7 +576,7 @@ import os
 import gc
 
 # Usar variable de entorno para Carros
-PROJECT_PATH = os.getenv('CARROS_PROJECT_PATH', r"C:\Users\danie\vscode-environment-for-maya\Carros")
+PROJECT_PATH = os.getenv('CARROS_PROJECT_PATH', r"C:\Users\pc\Documents\Repositorios\TECNICAL_ART_\Carros")
 MODULE_NAME = "Carros"
 
 def reload_carros_modules():

@@ -131,7 +131,7 @@ class RuedasController:
                 radius=radio_eje,
                 height=1.0,  # Longitud temporal, se ajustará después
                 subdivisionsAxis=12,
-                subdivisionsHeight=1,
+                subdivisionsHeight=2,
                 subdivisionsCaps=1,
                 axis=(1, 0, 0),
                 createUVs=2,
@@ -145,7 +145,7 @@ class RuedasController:
                 radius=radio_eje,
                 height=1.0,  # Longitud temporal, se ajustará después
                 subdivisionsAxis=12,
-                subdivisionsHeight=1,
+                subdivisionsHeight=2,
                 subdivisionsCaps=1,
                 axis=(1, 0, 0),
                 createUVs=2,

@@ -94,6 +94,8 @@ dist/
 !.vscode/extensions.json
 *.code-workspace
 
+.vscode/tasks.json
+
 # Archivos de PyCharm
 .idea/
 *.iml
